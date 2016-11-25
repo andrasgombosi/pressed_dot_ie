@@ -77,36 +77,36 @@ for link in SOUP.find_all('a'):
 
 # so, at this stage I have a full list of URL's which point to actual articles
 
-# for i in range(0, len(URL_LIST)):
+
+FULLTEXT = ''
+
+for i in range(0, len(URL_LIST)):
 #    print("%d element: %s " % (i, URL_LIST[i]))
 
 # right, get the first URL, and extract the words
 
-CHILD_DOC = urllib.request.urlopen(URL_LIST[0])
-CHILD_SOUP = BeautifulSoup(CHILD_DOC, 'lxml')
+    CHILD_DOC = urllib.request.urlopen(URL_LIST[i])
+    CHILD_SOUP = BeautifulSoup(CHILD_DOC, 'lxml')
 
-#this is irishtimes specific again..
-ARTICLE = CHILD_SOUP.find('article')
-#print (ARTICLE.getText())
+    #this is irishtimes specific again..
+    ARTICLE = CHILD_SOUP.find('article')
+    #print (ARTICLE.getText())
 
-# so, the wordcloud package takes a text file as input, let's create one
-#TEXT_FILE = open('text.txt','w')
-#TEXT_FILE.write(ARTICLE.getText())
-# Read the whole text.
+    TEXT = ARTICLE.getText()
+    FULLTEXT = FULLTEXT + TEXT
+    # Generate a word cloud image
 
-TEXT = ARTICLE.getText()
-# Generate a word cloud image
-WORDCLOUD = WordCloud().generate(TEXT)
+WORDCLOUD = WordCloud().generate(FULLTEXT)
 
-# Display the generated image:
-# the matplotlib way:
+    # Display the generated image:
+    # the matplotlib way:
 
 plt.imshow(WORDCLOUD)
 plt.axis("off")
 
-# lower max_font_size
-WORDCLOUD = WordCloud(max_font_size=40).generate(TEXT)
-plt.figure()
-plt.imshow(WORDCLOUD)
-plt.axis("off")
-plt.show()
+    # lower max_font_size
+#    WORDCLOUD = WordCloud(max_font_size=40).generate(TEXT)
+#    plt.figure()
+#    plt.imshow(WORDCLOUD)
+#    plt.axis("off")
+#    plt.show()
