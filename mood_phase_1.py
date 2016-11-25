@@ -10,12 +10,18 @@ from bs4 import UnicodeDammit
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 
+def has_class_but_no_id(tag):
+    '''
+    this function is to be passed to the find_all()
+    BeautifulSoup function to only retrieve P tags
+    '''
+    return tag.has_attr('class') and not tag.has_attr('id')
+
 def cleanse_href(href_str, base_url):
     """
     Function to sort out the different href parsing methods
     and generate a meaningful URL's to follow
     """
-
     ret_val = True
 
     try:
@@ -77,36 +83,44 @@ for link in SOUP.find_all('a'):
 
 # so, at this stage I have a full list of URL's which point to actual articles
 
-
 FULLTEXT = ''
 
-for i in range(0, len(URL_LIST)):
-#    print("%d element: %s " % (i, URL_LIST[i]))
+print(len(URL_LIST))
 
-# right, get the first URL, and extract the words
+#for i in range(52, 57):
+for i in range(0, len(URL_LIST)-1):
+
+# right, get the ith URL, and extract the words
 
     CHILD_DOC = urllib.request.urlopen(URL_LIST[i])
     CHILD_SOUP = BeautifulSoup(CHILD_DOC, 'lxml')
 
     #this is irishtimes specific again..
     ARTICLE = CHILD_SOUP.find('article')
+
     #print (ARTICLE.getText())
 
-    TEXT = ARTICLE.getText()
-    FULLTEXT = FULLTEXT + TEXT
+    if ARTICLE is not None:
+        TEXT_UNICODE = UnicodeDammit(ARTICLE.getText())
+        TEXT = TEXT_UNICODE.unicode_markup
+        FULLTEXT = FULLTEXT + TEXT
+        #print("article found")
+    #else:
+    #    print("article NOT found")
+    #    URL_LIST.pop(i)
+    #print(FULLTEXT)
     # Generate a word cloud image
 
+    #print("%d element: %s " % (i, URL_LIST[i]))
+
 WORDCLOUD = WordCloud().generate(FULLTEXT)
-
-    # Display the generated image:
-    # the matplotlib way:
-
 plt.imshow(WORDCLOUD)
 plt.axis("off")
+plt.show()
 
     # lower max_font_size
-#    WORDCLOUD = WordCloud(max_font_size=40).generate(TEXT)
-#    plt.figure()
-#    plt.imshow(WORDCLOUD)
-#    plt.axis("off")
-#    plt.show()
+#WORDCLOUD = WordCloud(max_font_size=40).generate(FULLTEXT)
+#plt.figure()
+#plt.imshow(WORDCLOUD)
+#plt.axis("off")
+#plt.show()
