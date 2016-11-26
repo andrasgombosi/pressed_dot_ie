@@ -87,8 +87,8 @@ FULLTEXT = ''
 
 print(len(URL_LIST))
 
-#for i in range(52, 57):
-for i in range(0, len(URL_LIST)-1):
+#for i in range(1, 5):
+#for i in range(0, len(URL_LIST)-1):
 
 # right, get the ith URL, and extract the words
 
@@ -98,13 +98,15 @@ for i in range(0, len(URL_LIST)-1):
     #this is irishtimes specific again..
     ARTICLE = CHILD_SOUP.find('article')
 
-    #print (ARTICLE.getText())
-
     if ARTICLE is not None:
-        TEXT_UNICODE = UnicodeDammit(ARTICLE.getText())
-        TEXT = TEXT_UNICODE.unicode_markup
-        FULLTEXT = FULLTEXT + TEXT
-        #print("article found")
+        for paragraph in ARTICLE.find_all('p'):
+            if paragraph.string is not None:
+                TEXT_UNICODE = UnicodeDammit(paragraph.string)
+                TEXT = TEXT_UNICODE.unicode_markup
+                FULLTEXT = FULLTEXT + TEXT
+            #print("article found")
+
+    #    print ("%r" % FULLTEXT)
     #else:
     #    print("article NOT found")
     #    URL_LIST.pop(i)
@@ -115,12 +117,10 @@ for i in range(0, len(URL_LIST)-1):
 
 WORDCLOUD = WordCloud().generate(FULLTEXT)
 plt.imshow(WORDCLOUD)
-plt.axis("off")
-plt.show()
 
     # lower max_font_size
 #WORDCLOUD = WordCloud(max_font_size=40).generate(FULLTEXT)
 #plt.figure()
 #plt.imshow(WORDCLOUD)
-#plt.axis("off")
-#plt.show()
+plt.axis("off")
+plt.show()
