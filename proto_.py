@@ -3,13 +3,15 @@ MOOD.IE news site front page extractor
 phase 1
 """
 import os
-import urllib.request
+import urllib
 import re
 from bs4 import BeautifulSoup
 from bs4 import UnicodeDammit
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import datetime
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
 
 def log(entry):
     '''
@@ -24,13 +26,26 @@ def generate_wordcloud_image(inbound_text,filename):
     '''
     generates a WordCloud image
     '''
+    #WORDCLOUD = WordCloud(max_font_size=50).generate(inbound_text)
     WORDCLOUD = WordCloud(max_font_size=50).generate(inbound_text)
     plt.imshow(WORDCLOUD)
     plt.axis("off")
     plt.savefig(filename)
     log("Wordcloud image %s generated " % filename)
 
-def dissect_article(article, top_domain):
+def remove_stopwords(text):
+    ret_val = ''
+    word_tokens = word_tokenize(text)
+
+    for w in word_tokens:
+        if w not in STOPWORDS:
+            ret_val = ret_val + ' ' + w
+
+    log('remove_stopwords returned %s ' % ret_val)
+    return ret_val
+
+
+def dissect_article(child_soup, top_domain):
     '''
     separated out the handling of the contents of the main article tag, so
     it is not as cluttered. Every top domain has a different webpage structure
@@ -39,10 +54,13 @@ def dissect_article(article, top_domain):
     #log('In dissect_article, top_domain : %s ' % top_domain)
 
     ret_val =''
-
+    '''
+    Irish Times specific processing logic
+    '''
     if top_domain == TOP_DOMAINS['IRT']:
 
-    #    log('1')
+    #main article seems to be in an <ARTICLE> tag
+        article = child_soup.find('article')
 
         if article is not None and article.hgroup is not None:
         #    log('2')
@@ -60,9 +78,17 @@ def dissect_article(article, top_domain):
                 #log('6')
                 ret_val = ret_val + TEXT
 
-        log("%s" % ret_val)
+        # log("%s" % ret_val)
+
+    '''
+    Independent specific processing logic
+    '''
 
     if top_domain == TOP_DOMAINS['IND']:
+
+    #main article seems to be in an <ARTICLE> tag
+        article = child_soup.find('article')
+
         if article is not None and article is not None:
             # extracting header 1 from the article
             if article.h1 is not None and article.h1.string is not None :
@@ -75,6 +101,18 @@ def dissect_article(article, top_domain):
                 TEXT = TEXT_UNICODE.unicode_markup
                 ret_val = ret_val + TEXT
 
+    '''
+    Irish Examiner specific processing logic
+    '''
+
+    if top_domain == TOP_DOMAINS['IEX']:
+
+    #main article seems to be in an <ARTICLE> tag
+        article = child_soup.find("title")
+        ret_val = article.string
+        ret_val = re.sub('| Irish Examiner$', '', ret_val)
+
+    ret_val = ret_val.lower()
     # Eliminating common keywords
     for key, replacement in STR_REPLACEMENT_DICT:
         ret_val = ret_val.replace( key, replacement )
@@ -135,6 +173,17 @@ def cleanse_href(href_str, top_domain):
         else:
             ret_val = False
 
+    if ret_val and top_domain == TOP_DOMAINS['IEX']:
+        # irish times puts a counter or a version number at the end
+        # of their article pages, like 1.255698, so quick regexp
+        # also, putting back the top domain to deliver full URL for irish times
+
+        if re.search(r'[0-9]{3,7}\.html', href_str) and 'sponsored-content' not in href_str:
+            ret_val = TOP_DOMAIN + href_str
+        else:
+            ret_val = False
+
+
     return ret_val
 
 ################
@@ -143,22 +192,38 @@ log_file_name = "pressed.log"
 log_file = open(log_file_name,'w')
 
 TOP_DOMAINS = {'IRT': "http://www.irishtimes.com",
-               'IND': "http://www.independent.ie"}
+               'IND': "http://www.independent.ie",
+               'IEX': "http://www.irishexaminer.com"
+               }
 
-STR_REPLACEMENT_DICT =     [('Irish', ''),
-                            ('Ireland', ''),
-                            ('Dublin', '')]
+STOPWORDS = set(stopwords.words('english'))
+
+STR_REPLACEMENT_DICT =     [('irish', ''),
+                            ('ireland', ''),
+                            ('dublin', ''),
+                            ('examiner', ''),
+                            ("n't",''),
+                            ("watch",''),
+                            ("video",''),
+                            ("'s",'')
+                            ]
 
 os.system('cls')
 
 FULLTEXT = ' '
 
 for short,url in TOP_DOMAINS.items():
+    TOP_DOMAIN_TEXT = ''
+    log('TOP_DOMAIN_TEXT length: %d' % len(TOP_DOMAIN_TEXT))
     # get one top domain
     TOP_DOMAIN = TOP_DOMAINS[short]
     log("Working on %s" % TOP_DOMAIN)
     #scan front page
-    HTML_DOC = urllib.request.urlopen(TOP_DOMAIN)
+    try:
+        HTML_DOC = urllib.request.urlopen(TOP_DOMAIN)
+    except urllib.error.URLError:
+        log("top domain %s is inaccessible" % TOP_DOMAIN )
+
     SOUP = BeautifulSoup(HTML_DOC, 'lxml')
 
     #get the URLs
@@ -185,15 +250,16 @@ for short,url in TOP_DOMAINS.items():
         CHILD_DOC = urllib.request.urlopen(URL_LIST[i])
         CHILD_SOUP = BeautifulSoup(CHILD_DOC, 'lxml')
 
-        #main article seems to be in an <ARTICLE> tag
-        ARTICLE = CHILD_SOUP.find('article')
+        HEADER_CONTENT = dissect_article(child_soup=CHILD_SOUP, top_domain=TOP_DOMAIN)
 
-        HEADER_CONTENT = dissect_article(article=ARTICLE, top_domain=TOP_DOMAIN)
+        TOP_DOMAIN_TEXT = TOP_DOMAIN_TEXT + remove_stopwords(HEADER_CONTENT)
 
-        FULLTEXT = FULLTEXT + HEADER_CONTENT
     '''generate a standalone image for each of
         the major papers too beside the overall'''
-    generate_wordcloud_image(inbound_text=FULLTEXT,filename= short +'.png' )
+
+    generate_wordcloud_image(inbound_text=TOP_DOMAIN_TEXT,filename= short +'.png' )
+    # save it into the overall text
+    FULLTEXT = FULLTEXT + TOP_DOMAIN_TEXT
 
         #log( "URL: %s " % URL_LIST[i])
         #log( "Header content: %s " % HEADER_CONTENT)
