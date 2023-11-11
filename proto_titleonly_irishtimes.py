@@ -29,17 +29,23 @@ def cleanse_href(href_str, base_url):
         href_str = href_str.strip()
     except AttributeError:
         ret_val = False
+    
+    print(f"ret_val {ret_val} ")
 
 # getting rid of single digit , typically # hrefs
     if ret_val and len(href_str) > 1:
         ret_val = href_str
     else:
         ret_val = False
+    
+    print(f"ret_val {ret_val} ")
 
 # converting to unicode
     if ret_val:
         href_str_unicode = UnicodeDammit(href_str)
         href_str = (href_str_unicode.unicode_markup)
+
+    print(f"ret_val {ret_val} ")
 
 # domain specific
     if ret_val and base_url == "http://www.irishtimes.com":
@@ -47,11 +53,11 @@ def cleanse_href(href_str, base_url):
         # of their article pages, like 1.255698, so quick regexp
         # also, putting back the top domain to deliver full URL for irish times
 
-        if re.search(r'\.[0-9]{3,5}', href_str):
-            ret_val = TOP_DOMAIN + href_str
-        else:
-            ret_val = False
-
+       # if re.search(r'\.[0-9]{3,5}', href_str):
+         ret_val = TOP_DOMAIN + href_str
+       # else:
+       #     ret_val = False
+    print(f"ret_val {ret_val} ")
     return ret_val
 
 
@@ -74,11 +80,12 @@ URL_LIST = []
 
 for link in SOUP.find_all('a'):
 
+   
     # and get them into a list, only one instance of each thou!
 
     href_content = link.get('href')
     href_content_clean = cleanse_href(href_content, TOP_DOMAIN)
-
+    print(href_content_clean)
     if href_content_clean is not False:
         #only append it once
         if href_content_clean not in URL_LIST:
